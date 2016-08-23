@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>fabric</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <link rel="stylesheet" href="css/animate.min.css">
+    <style>
+        .layout-container {
+            width: 500px;
+            /*border: 1px solid black;*/
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 500px;
+            height: 500px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ti-modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(58, 19, 56, 0.8);
+        }
+
+        .ti-modal-child {
+            top: 200px;
+            background-color: rgba(253, 253, 254, 0.8);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div id="tinker" class="row">
+        <div class="col-md-4">
+            <h4>load table from server url</h4>
+            <input v-model="url" style="width: 100%">
+            <table-info
+                    :selected-layout.sync="selectedLayout"
+                    :layouts="layouts"
+                    :table-event="tableEvent"
+                    :new-table-name.sync="newTableName"
+                    @export-layouts="exportLayouts"
+            >
+            </table-info>
+        </div>
+        <div class="col-md-8">
+            <div class="row">
+                <div class="col-md-10">
+                    <layout-info
+                            :selected-layout.sync="selectedLayout"
+                            :layout="layout"
+                            :layouts="layouts"
+                            v-for="layout in layouts"
+                    >
+                    </layout-info>
+                </div>
+                <div class="col-md-2">
+                    <button @click="askLayoutName">+</button>
+                </div>
+            </div>
+            <div v-show="askLayoutNameDivShowed">
+                <input type="text" name="newLayoutName" autofocus @keyup.enter="getLayoutName">
+                <button @click="getLayoutName">ok</button>
+            </div>
+            <div class="layout-container">
+                <layout-table
+                        :selected-layout.sync="selectedLayout"
+                        :layout="layout" v-for="layout in layouts"
+                        :layouts="layouts"
+                        :table-event="tableEvent"
+                        :new-table-name.sync="newTableName"
+                @broadcast-update-table-info="broadcastUpdateTableInfo"
+                >
+                </layout-table>
+            </div>
+        </div>
+    </div>
+
+    <template id="table-info-template">
+        <p>{{ selectedLayout.name }}</p>
+        <div class="row">
+            <div class="col-md-4">Rotation</div>
+            <div class="col-md-8">
+                <div class="row" v>
+                    <div class="col-md-4 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"rotation","action":"minus"}'>-
+                    </div>
+                    <div class="col-md-4 tex text-center">{{ rotation }}</div>
+                    <div class="col-md-4 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"rotation","action":"plus"}'
+                    >+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">Top/Y</div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-4 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"top","action":"minus"}'
+                    >-
+                    </div>
+                    <div class="col-md-4 text-center">{{ top }}</div>
+                    <div class="col-md-4 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"top","action":"plus"}'
+                    >+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">Left/X</div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-4 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"left","action":"minus"}'
+                    >-
+                    </div>
+                    <div class="col-md-4 text-center">{{ left }}</div>
+                    <div class="col-md-4 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"left","action":"plus"}'
+                    >+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">Width</div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-4 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"width","action":"minus"}'
+                    >-
+                    </div>
+                    <div class="col-md-4 text-center">{{ width }}</div>
+                    <div class="col-md-4 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"width","action":"plus"}'
+                    >+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">Height</div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-4 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"height","action":"minus"}'
+                    >-
+                    </div>
+                    <div class="col-md-4 text-center">{{ height }}</div>
+                    <div class="col-md-4 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"height","action":"plus"}'
+                    >+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">Shape</div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-6 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"shape","action":"rect"}'
+                    >Rect
+                    </div>
+                    <div class="col-md-6 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"shape","action":"ellipse"}'
+                    >Circle
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">Status</div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-6 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"status","action":"enabled"}'
+                    >Enable</div>
+                    <div class="col-md-6 btn btn-sm"
+                         v-ti-gesture
+                         modify-table-info='{"prop":"status","action":"disabled"}'
+                    >Disable</div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">Action</div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-6">Rename</div>
+                    <div class="col-md-6">Delete</div>
+                </div>
+            </div>
+        </div>
+        <button @click="askTableNameDivShowed = !askTableNameDivShowed">+ add table</button>
+        <button>return</button>
+        <div v-show="askTableNameDivShowed">
+            <input v-model="inputNewTableName" @keyup.enter="setNewTableName" autofocus>
+            <button @click="setNewTableName">ok</button>
+        </div>
+        <button @click="dispatchExportLayouts">save</button>
+        <div v-show="exportLayoutsDivShowed"
+             transition="bounce" class="animated"
+             style="background-color: #99C93D;
+                    color: white;
+                    padding: 5px;
+                    font-weight: bold"
+        >
+            <p>saved in localStorage</p>
+        </div>
+    </template>
+
+    <template id="layout-info-template">
+		<span
+                :class='{"layout-info-active": active}'
+        @click="selectedLayout = layout"
+        v-el:vailo
+        >{{ layout.name }}
+        </span>
+        <div v-show="layoutInfoActionDiv" class="ti-modal" style="width: 700px; height: 600px; z-index: 100">
+            <div class="row">
+                <div class="col-md-8 col-md-offset-2 ti-modal-child">
+                    <div class="row">
+                        <button @click="inputRenameLayoutDiv = !inputRenameLayoutDiv"
+                        v-show="!inputRenameLayoutDiv"
+                        >
+                        rename
+                        </button>
+                    </div>
+
+                    <div class="row" v-show="inputRenameLayoutDiv">
+                        <input v-model="layoutNewName" autofocus @keyup.enter="renameLayout">
+                        <button @click="renameLayout">rename</button>
+                    </div>
+
+                    <div class="row">
+                        <button @click="deleteLayout">delete layout</button>
+                    </div>
+
+                    <div class="row">
+                        <button @click="layoutInfoActionDiv = false">cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="layout-table-template">
+        <div v-show="layout.name == selectedLayout.name">
+            <h1>{{ layout.name }}</h1>
+            <div class="canvas-container">
+                <canvas id="{{ layout.canvasId }}" v-el:canvas></canvas>
+            </div>
+            <div v-show="tableActionDiv" class="ti-modal">
+                <div class="row">
+                    <div class="col-md-8 col-md-offset-2 ti-modal-child">
+                        <div class="row">
+                            <div class="row">
+                                <button @click="inputRenameTableDiv = !inputRenameTableDiv"
+                                v-show="!inputRenameTableDiv"
+                                >
+                                rename
+                                </button>
+                            </div>
+
+                            <div class="row" v-show="inputRenameTableDiv">
+                                <input v-model="tableNewName" autofocus @keyup.enter="renameTable">
+                                <button @click="renameTable">rename</button>
+                            </div>
+
+                            <div class="row">
+                                <button @click="deleteTable">delete table</button>
+                            </div>
+
+                            <div class="row">
+                                <button @click="tableActionDiv = false">cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+</div>
+<!--<script src="fabric.js"></script>-->
+<!--<script src="js/vue.min.js"></script>-->
+<script src="js/fabric.min.js"></script>
+<script src="js/f.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
